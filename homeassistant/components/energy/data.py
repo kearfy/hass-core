@@ -15,7 +15,7 @@ from homeassistant.helpers import config_validation as cv, singleton, storage
 from .const import DOMAIN
 
 STORAGE_VERSION = 1
-STORAGE_MINOR_VERSION = 3
+STORAGE_MINOR_VERSION = 4
 STORAGE_KEY = DOMAIN
 
 
@@ -231,6 +231,21 @@ class DeviceConsumption(TypedDict):
     # that includes this device's consumption in its total
     included_in_stat: NotRequired[str]
 
+    # An optional electrical area (circuit) this device belongs to
+    electrical_area_id: NotRequired[str]
+
+
+class ElectricalAreaType(TypedDict):
+    """Dictionary holding an electrical area (circuit breaker group)."""
+
+    electrical_area_id: str
+
+    # Display name for this circuit group
+    name: str
+
+    # statistic_id of the kWh meter for this circuit
+    stat_consumption: str
+
 
 class EnergyPreferences(TypedDict):
     """Dictionary holding the energy data."""
@@ -238,6 +253,7 @@ class EnergyPreferences(TypedDict):
     energy_sources: list[SourceType]
     device_consumption: list[DeviceConsumption]
     device_consumption_water: NotRequired[list[DeviceConsumption]]
+    electrical_areas: NotRequired[list[ElectricalAreaType]]
 
 
 class EnergyPreferencesUpdate(EnergyPreferences, total=False):
@@ -537,6 +553,15 @@ DEVICE_CONSUMPTION_SCHEMA = vol.Schema(
         vol.Optional("stat_rate"): str,
         vol.Optional("name"): str,
         vol.Optional("included_in_stat"): str,
+        vol.Optional("electrical_area_id"): str,
+    }
+)
+
+ELECTRICAL_AREA_SCHEMA = vol.Schema(
+    {
+        vol.Required("electrical_area_id"): str,
+        vol.Required("name"): str,
+        vol.Required("stat_consumption"): str,
     }
 )
 
@@ -643,6 +668,10 @@ class _EnergyPreferencesStore(storage.Store[EnergyPreferences]):
                     new_sources.append(source)
             data["energy_sources"] = new_sources
 
+        if old_major_version == 1 and old_minor_version < 4:
+            # Add electrical_areas field if it doesn't exist
+            data.setdefault("electrical_areas", [])
+
         return data
 
 
@@ -669,6 +698,7 @@ class EnergyManager:
             "energy_sources": [],
             "device_consumption": [],
             "device_consumption_water": [],
+            "electrical_areas": [],
         }
 
     async def async_update(self, update: EnergyPreferencesUpdate) -> None:
@@ -682,6 +712,7 @@ class EnergyManager:
             "energy_sources",
             "device_consumption",
             "device_consumption_water",
+            "electrical_areas",
         ):
             if key in update:
                 data[key] = update[key]

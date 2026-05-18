@@ -25,6 +25,7 @@ from homeassistant.util import dt as dt_util
 from .const import DOMAIN
 from .data import (
     DEVICE_CONSUMPTION_SCHEMA,
+    ELECTRICAL_AREA_SCHEMA,
     ENERGY_SOURCE_SCHEMA,
     EnergyManager,
     EnergyPreferencesUpdate,
@@ -130,6 +131,7 @@ def ws_get_prefs(
         vol.Optional("energy_sources"): ENERGY_SOURCE_SCHEMA,
         vol.Optional("device_consumption"): [DEVICE_CONSUMPTION_SCHEMA],
         vol.Optional("device_consumption_water"): [DEVICE_CONSUMPTION_SCHEMA],
+        vol.Optional("electrical_areas"): [ELECTRICAL_AREA_SCHEMA],
     }
 )
 @websocket_api.async_response
